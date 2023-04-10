@@ -21,11 +21,15 @@
 #define INV_UI_PAD_LEFT 10
 #define INV_UI_PAD_TOP 10
 #define INV_UI_PAD_SLOT_FACTOR 0.1f
-#define INV_UI_ROW_SIZE 5
-#define INV_UI_SLOT_SIZE_X ((INV_UI_WIDTH - INV_UI_PAD_LEFT * 2) / INV_UI_ROW_SIZE)
-#define INV_UI_SLOT_SIZE_Y ((INV_UI_HEIGHT - INV_UI_PAD_LEFT * 2) / INV_UI_ROW_SIZE)
+#define INV_UI_COLUMN_COUNT 5
+#define INV_UI_ROW_COUNT ((INV_SIZE + (INV_UI_COLUMN_COUNT - 1)) / INV_UI_COLUMN_COUNT)
+#define INV_UI_SLOT_SIZE_X ((INV_UI_WIDTH - INV_UI_PAD_LEFT * 2) / INV_UI_COLUMN_COUNT)
+#define INV_UI_SLOT_SIZE_Y ((INV_UI_HEIGHT - INV_UI_PAD_LEFT * 2) / INV_UI_ROW_COUNT)
 #define INV_UI_PAD_SLOT_X (INV_UI_SLOT_SIZE_X * INV_UI_PAD_SLOT_FACTOR)
 #define INV_UI_PAD_SLOT_Y (INV_UI_SLOT_SIZE_Y * INV_UI_PAD_SLOT_FACTOR)
+#define INV_UI_PAD_TEXT 10
+#define INV_UI_PAD_TEXT_SLOT_SIZE_X 15
+#define INV_UI_PAD_TEXT_SLOT_SIZE_Y 5
 
 typedef struct {
     const char *name;
@@ -229,11 +233,11 @@ int main(void) {
                     );
 
                     for (int i = 0; i < INV_SIZE; ++i) {
-                        int shift_left = i % INV_UI_ROW_SIZE;
-                        int shift_down = i / INV_UI_ROW_SIZE;
+                        int shift_right = i % INV_UI_COLUMN_COUNT;
+                        int shift_down = i / INV_UI_COLUMN_COUNT;
 
                         Vector2 slot_pos = (Vector2){
-                            .x = INV_UI_PAD_LEFT + shift_left * INV_UI_SLOT_SIZE_X,
+                            .x = INV_UI_PAD_LEFT + shift_right * INV_UI_SLOT_SIZE_X,
                             .y = INV_UI_PAD_TOP + shift_down * INV_UI_SLOT_SIZE_Y
                         };
 
@@ -250,8 +254,8 @@ int main(void) {
 
                             DrawText(
                                 slot->item->prefab->name,
-                                slot_pos.x + 10,
-                                slot_pos.y + 10,
+                                slot_pos.x + INV_UI_PAD_TEXT,
+                                slot_pos.y + INV_UI_PAD_TEXT,
                                 INV_UI_FONT_SIZE,
                                 BLACK
                             );
@@ -268,8 +272,8 @@ int main(void) {
 
                                 DrawText(
                                     inventory_texture_slot_size_buffer,
-                                    slot_pos.x + INV_UI_SLOT_SIZE_X - text_width - 15,
-                                    slot_pos.y + INV_UI_SLOT_SIZE_Y - INV_UI_FONT_SIZE - 5,
+                                    slot_pos.x + INV_UI_SLOT_SIZE_X - text_width - INV_UI_PAD_TEXT_SLOT_SIZE_X,
+                                    slot_pos.y + INV_UI_SLOT_SIZE_Y - INV_UI_FONT_SIZE - INV_UI_PAD_TEXT_SLOT_SIZE_Y,
                                     INV_UI_FONT_SIZE,
                                     BLACK
                                 );
