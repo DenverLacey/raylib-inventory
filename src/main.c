@@ -88,22 +88,38 @@ typedef struct {
     Slot slots[INV_SIZE];
 } Inventory;
 
-bool inventory_store_item_at(Inventory *inv, const Item *item, int index) {
+bool inventory_store_items_at(Inventory *inv, int index, const Item *item, int count) {
     Slot *slot = &inv->slots[index];
     if (inv->occupied[index]) {
         if (slot->item != item) return false;
-        if (slot->size >= item->max_slot_size) return false;
-        ++slot->size;
+        if (slot->size + count > item->max_slot_size) return false;
+
+        slot->size += count;
     } else {
+        if (item->max_slot_size < count) return false;
+
         slot->item = item;
-        slot->size = 1;
+        slot->size = count;
         inv->occupied[index] = true;
     }
 
     return true;
 }
 
-bool inventory_store_item(Inventory *inv, const Item *item) {
+bool inventory_store_item_at(Inventory *inv, int index, const Item *item) {
+    return inventory_store_items_at(inv, index, item, 1);
+}
+
+bool inventory_store_items_by_kind_at(Inventory *inv, int index, ItemKind kind, int count) {
+    const Item *item = &ITEMS[kind];
+    return inventory_store_items_at(inv, index, item, count);
+}
+
+bool inventory_store_item_by_kind_at(Inventory *inv, int index, ItemKind kind) {
+    return inventory_store_items_by_kind_at(inv, index, kind, 1);
+}
+
+bool inventory_store_items(Inventory *inv, const Item *item, int count) {
     int target_slot = -1;
     bool slot_found = false;
     for (int i = 0; i < INV_SIZE; ++i) {
@@ -114,9 +130,9 @@ bool inventory_store_item(Inventory *inv, const Item *item) {
         }
 
         if (inv->slots[i].item == item &&
-            inv->slots[i].size < item->max_slot_size)
+            inv->slots[i].size + count <= item->max_slot_size)
         {
-            ++inv->slots[i].size;
+            inv->slots[i].size += count;
             return true;
         }
     }
@@ -127,10 +143,24 @@ bool inventory_store_item(Inventory *inv, const Item *item) {
 
     Slot *slot = &inv->slots[target_slot];
     slot->item = item;
-    slot->size = 1;
+    slot->size = count;
     inv->occupied[target_slot] = true;
 
     return true;
+}
+
+bool inventory_store_item(Inventory *inv, const Item *item) {
+    return inventory_store_items(inv, item, 1);
+}
+
+bool inventory_store_items_by_kind(Inventory *inv, ItemKind kind, int count) {
+    const Item *item = &ITEMS[kind];
+    return inventory_store_items(inv, item, count);
+}
+
+bool inventory_store_item_by_kind(Inventory *inv, ItemKind kind) {
+    const Item *item = &ITEMS[kind];
+    return inventory_store_item(inv, item);
 }
 
 Slot *inventory_get_slot_at(Inventory *inv, int index) {
@@ -174,17 +204,20 @@ int main(void) {
     InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "Inventory Test");
 
     Inventory inventory = {0};
-    inventory_store_item_at(&inventory, &ITEMS[ItemKind_Sword], 0);
-    inventory_store_item(&inventory, &ITEMS[ItemKind_Shield]);
-    inventory_store_item(&inventory, &ITEMS[ItemKind_Food]);
-    inventory_store_item(&inventory, &ITEMS[ItemKind_Food]);
-    inventory_store_item(&inventory, &ITEMS[ItemKind_Food]);
-    inventory_store_item(&inventory, &ITEMS[ItemKind_Food]);
-    inventory_store_item(&inventory, &ITEMS[ItemKind_Sword]);
-    inventory_store_item(&inventory, &ITEMS[ItemKind_Food]);
-    inventory_store_item(&inventory, &ITEMS[ItemKind_Food]);
+    inventory_store_item_by_kind_at(&inventory, 0, ItemKind_Sword);
+    inventory_store_item_by_kind(&inventory, ItemKind_Shield);
+    inventory_store_item_by_kind(&inventory, ItemKind_Food);
+    inventory_store_item_by_kind(&inventory, ItemKind_Food);
+    inventory_store_item_by_kind(&inventory, ItemKind_Food);
+    inventory_store_item_by_kind(&inventory, ItemKind_Food);
+    inventory_store_item_by_kind(&inventory, ItemKind_Sword);
+    inventory_store_item_by_kind(&inventory, ItemKind_Food);
+    inventory_store_item_by_kind(&inventory, ItemKind_Food);
+    inventory_store_items_by_kind(&inventory, ItemKind_Food, 21);
 
-    inventory_print(&inventory);
+    #ifdef DEBUG
+        inventory_print(&inventory);
+    #endif
 
     Player player;
     player.position = (Vector2){ WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2 };
