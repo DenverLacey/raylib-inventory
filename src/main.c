@@ -13,11 +13,19 @@
 #define PLAYER_SIZE 15
 #define PLAYER_SPEED 500
 
-#define INV_UI_SIZE_FACTOR 0.5f
 #define INV_UI_OPACITY 0.5f
-#define INV_UI_HEADER_POS_X 15
-#define INV_UI_HEADER_POS_Y 15 
-#define INV_UI_HEADER_FONT_SIZE 25
+#define INV_UI_FONT_SIZE 25
+#define INV_UI_SCALE_FACTOR 0.75f
+#define INV_UI_WIDTH (WINDOW_WIDTH * INV_UI_SCALE_FACTOR)
+#define INV_UI_HEIGHT (WINDOW_HEIGHT * INV_UI_SCALE_FACTOR)
+#define INV_UI_PAD_LEFT 10
+#define INV_UI_PAD_TOP 10
+#define INV_UI_PAD_SLOT_FACTOR 0.1f
+#define INV_UI_ROW_SIZE 5
+#define INV_UI_SLOT_SIZE_X ((INV_UI_WIDTH - INV_UI_PAD_LEFT * 2) / INV_UI_ROW_SIZE)
+#define INV_UI_SLOT_SIZE_Y ((INV_UI_HEIGHT - INV_UI_PAD_LEFT * 2) / INV_UI_ROW_SIZE)
+#define INV_UI_PAD_SLOT_X (INV_UI_SLOT_SIZE_X * INV_UI_PAD_SLOT_FACTOR)
+#define INV_UI_PAD_SLOT_Y (INV_UI_SLOT_SIZE_Y * INV_UI_PAD_SLOT_FACTOR)
 
 typedef struct {
     const char *name;
@@ -175,11 +183,11 @@ int main(void) {
     inventory_print(&inventory);
 
     Player player;
-    player.position = (Vector2){ WINDOW_WIDTH * INV_UI_SIZE_FACTOR, WINDOW_HEIGHT * INV_UI_SIZE_FACTOR };
+    player.position = (Vector2){ WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2 };
     player.inventory = &inventory;
 
     bool inventory_open = false;
-    RenderTexture2D inventory_texture = LoadRenderTexture(WINDOW_WIDTH * INV_UI_SIZE_FACTOR, WINDOW_HEIGHT * INV_UI_SIZE_FACTOR);
+    RenderTexture2D inventory_texture = LoadRenderTexture(INV_UI_WIDTH, INV_UI_HEIGHT);
     char inventory_texture_slot_size_buffer[3];
 
     while (!WindowShouldClose()) {
@@ -219,31 +227,53 @@ int main(void) {
                         inventory_texture.texture.height,
                         ColorAlpha(BLACK, INV_UI_OPACITY)
                     );
-                    DrawText("Inventory:", INV_UI_HEADER_POS_X, INV_UI_HEADER_POS_Y, INV_UI_HEADER_FONT_SIZE, WHITE);
 
                     for (int i = 0; i < INV_SIZE; ++i) {
-                        int pad_top = INV_UI_HEADER_POS_Y + 30;
-                        int pad_left = INV_UI_HEADER_POS_X;
-                        int pad_slot = 10;
-                        int shift_left = i % 5;
-                        int shift_down = i / 5;
+                        int shift_left = i % INV_UI_ROW_SIZE;
+                        int shift_down = i / INV_UI_ROW_SIZE;
 
-                        int slot_size = 50;
+                        Vector2 slot_pos = (Vector2){
+                            .x = INV_UI_PAD_LEFT + shift_left * INV_UI_SLOT_SIZE_X,
+                            .y = INV_UI_PAD_TOP + shift_down * INV_UI_SLOT_SIZE_Y
+                        };
 
-                        int x = pad_left + shift_left * (slot_size + pad_slot);
-                        int y = pad_top + shift_down * (slot_size + pad_slot);
+                        DrawRectangle(
+                            slot_pos.x + INV_UI_PAD_SLOT_X / 2,
+                            slot_pos.y + INV_UI_PAD_SLOT_Y / 2,
+                            INV_UI_SLOT_SIZE_X - INV_UI_PAD_SLOT_X,
+                            INV_UI_SLOT_SIZE_Y - INV_UI_PAD_SLOT_Y,
+                            YELLOW
+                        );
 
-                        DrawRectangle(x, y, slot_size, slot_size, YELLOW);
                         if (player.inventory->occupied[i]) {
-                            DrawText(player.inventory->slots[i].item->prefab->name, x + 5, y + 5, 15, BLACK);
+                            Slot *slot = &player.inventory->slots[i];
 
-                            snprintf(
-                                inventory_texture_slot_size_buffer,
-                                sizeof(inventory_texture_slot_size_buffer),
-                                "%d",
-                                player.inventory->slots[i].size
+                            DrawText(
+                                slot->item->prefab->name,
+                                slot_pos.x + 10,
+                                slot_pos.y + 10,
+                                INV_UI_FONT_SIZE,
+                                BLACK
                             );
-                            DrawText(inventory_texture_slot_size_buffer, x + 5, y + 20, 15, BLACK);
+
+                            if (slot->item->max_slot_size != 1) {
+                                snprintf(
+                                    inventory_texture_slot_size_buffer,
+                                    sizeof(inventory_texture_slot_size_buffer),
+                                    "%d",
+                                    player.inventory->slots[i].size
+                                );
+
+                                int text_width = MeasureText(inventory_texture_slot_size_buffer, INV_UI_FONT_SIZE); 
+
+                                DrawText(
+                                    inventory_texture_slot_size_buffer,
+                                    slot_pos.x + INV_UI_SLOT_SIZE_X - text_width - 15,
+                                    slot_pos.y + INV_UI_SLOT_SIZE_Y - INV_UI_FONT_SIZE - 5,
+                                    INV_UI_FONT_SIZE,
+                                    BLACK
+                                );
+                            }
                         }
                     }
                 EndTextureMode();
@@ -251,13 +281,13 @@ int main(void) {
                 Rectangle inventory_rect = (Rectangle){
                     .width = inventory_texture.texture.width,
                     .height = -inventory_texture.texture.height,
-                    .x = 0,
+                    .x = 0.f,
                     .y = 0.f
                 };
 
                 Vector2 inventory_pos = (Vector2){
-                    WINDOW_WIDTH * INV_UI_SIZE_FACTOR * 0.5f,
-                    WINDOW_HEIGHT * INV_UI_SIZE_FACTOR * 0.5f
+                    WINDOW_WIDTH / 2 - INV_UI_WIDTH / 2,
+                    WINDOW_HEIGHT / 2 - INV_UI_HEIGHT / 2,
                 };
 
                 DrawTextureRec(inventory_texture.texture, inventory_rect, inventory_pos, WHITE);
