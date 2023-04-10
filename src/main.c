@@ -3,11 +3,21 @@
 #include <stdbool.h>
 
 #include "raylib.h"
+#include "raymath.h"
 
 #define WINDOW_WIDTH 800
 #define WINDOW_HEIGHT 600
 
 #define INV_SIZE 25
+
+#define PLAYER_SIZE 15
+#define PLAYER_SPEED 500
+
+#define INV_UI_SIZE_FACTOR 0.5f
+#define INV_UI_OPACITY 0.5f
+#define INV_UI_HEADER_POS_X 15
+#define INV_UI_HEADER_POS_Y 15 
+#define INV_UI_HEADER_FONT_SIZE 25
 
 typedef struct {
     const char *name;
@@ -164,14 +174,98 @@ int main(void) {
 
     inventory_print(&inventory);
 
+    Player player;
+    player.position = (Vector2){ WINDOW_WIDTH * INV_UI_SIZE_FACTOR, WINDOW_HEIGHT * INV_UI_SIZE_FACTOR };
+    player.inventory = &inventory;
+
+    bool inventory_open = false;
+    RenderTexture2D inventory_texture = LoadRenderTexture(WINDOW_WIDTH * INV_UI_SIZE_FACTOR, WINDOW_HEIGHT * INV_UI_SIZE_FACTOR);
+    char inventory_texture_slot_size_buffer[3];
+
     while (!WindowShouldClose()) {
+        // Input ==============================================================
+        float dt = GetFrameTime();
+
+        Vector2 velocity = {0};
+        if (IsKeyDown(KEY_W)) velocity.y -= 1;
+        if (IsKeyDown(KEY_A)) velocity.x -= 1;
+        if (IsKeyDown(KEY_S)) velocity.y += 1;
+        if (IsKeyDown(KEY_D)) velocity.x += 1;
+        velocity = Vector2Normalize(velocity);
+        velocity = Vector2Scale(velocity, PLAYER_SPEED * dt);
+
+        if (IsKeyPressed(KEY_I)) inventory_open = !inventory_open;
+        
         // Update =============================================================
+        player.position = Vector2Add(player.position, velocity);
+        player.position = Vector2Clamp(
+            player.position,
+            (Vector2){ 0, 0 },
+            (Vector2){ WINDOW_WIDTH - PLAYER_SIZE, WINDOW_HEIGHT - PLAYER_SIZE }
+        );
+
         // Draw ===============================================================
-        ClearBackground(BLACK);
+        ClearBackground(WHITE);
+
         BeginDrawing();
+            DrawRectangle(player.position.x, player.position.y, PLAYER_SIZE, PLAYER_SIZE, BLACK);
+
+            if (inventory_open) {
+                BeginTextureMode(inventory_texture);
+                    DrawRectangle(
+                        0,
+                        0,
+                        inventory_texture.texture.width,
+                        inventory_texture.texture.height,
+                        ColorAlpha(BLACK, INV_UI_OPACITY)
+                    );
+                    DrawText("Inventory:", INV_UI_HEADER_POS_X, INV_UI_HEADER_POS_Y, INV_UI_HEADER_FONT_SIZE, WHITE);
+
+                    for (int i = 0; i < INV_SIZE; ++i) {
+                        int pad_top = INV_UI_HEADER_POS_Y + 30;
+                        int pad_left = INV_UI_HEADER_POS_X;
+                        int pad_slot = 10;
+                        int shift_left = i % 5;
+                        int shift_down = i / 5;
+
+                        int slot_size = 50;
+
+                        int x = pad_left + shift_left * (slot_size + pad_slot);
+                        int y = pad_top + shift_down * (slot_size + pad_slot);
+
+                        DrawRectangle(x, y, slot_size, slot_size, YELLOW);
+                        if (player.inventory->occupied[i]) {
+                            DrawText(player.inventory->slots[i].item->prefab->name, x + 5, y + 5, 15, BLACK);
+
+                            snprintf(
+                                inventory_texture_slot_size_buffer,
+                                sizeof(inventory_texture_slot_size_buffer),
+                                "%d",
+                                player.inventory->slots[i].size
+                            );
+                            DrawText(inventory_texture_slot_size_buffer, x + 5, y + 20, 15, BLACK);
+                        }
+                    }
+                EndTextureMode();
+
+                Rectangle inventory_rect = (Rectangle){
+                    .width = inventory_texture.texture.width,
+                    .height = -inventory_texture.texture.height,
+                    .x = 0,
+                    .y = 0.f
+                };
+
+                Vector2 inventory_pos = (Vector2){
+                    WINDOW_WIDTH * INV_UI_SIZE_FACTOR * 0.5f,
+                    WINDOW_HEIGHT * INV_UI_SIZE_FACTOR * 0.5f
+                };
+
+                DrawTextureRec(inventory_texture.texture, inventory_rect, inventory_pos, WHITE);
+            }
         EndDrawing();
     }
 
+    UnloadRenderTexture(inventory_texture);
     CloseWindow();
     return 0;
 }
