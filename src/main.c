@@ -32,6 +32,7 @@
 #define INV_UI_PAD_TEXT 10
 #define INV_UI_PAD_TEXT_SLOT_SIZE_X 15
 #define INV_UI_PAD_TEXT_SLOT_SIZE_Y 5
+#define INV_UI_PAD_HOVER 5
 
 typedef struct {
     const char *name;
@@ -283,7 +284,13 @@ int main(void) {
                     };
 
                     if (CheckCollisionPointRec(GetMousePosition(), slot_rect)) {
-                        DrawRectangle(slot_rect.x - 5, slot_rect.y - 5, slot_rect.width + 10, slot_rect.height + 10, WHITE);
+                        DrawRectangle(
+                            slot_rect.x - INV_UI_PAD_HOVER,
+                            slot_rect.y - INV_UI_PAD_HOVER,
+                            slot_rect.width + INV_UI_PAD_HOVER * 2,
+                            slot_rect.height + INV_UI_PAD_HOVER * 2,
+                            WHITE
+                        );
                     }
 
                     DrawRectangleRec(slot_rect, YELLOW);
