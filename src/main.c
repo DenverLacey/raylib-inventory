@@ -227,7 +227,6 @@ int main(void) {
     player.inventory = &inventory;
 
     bool inventory_open = false;
-    RenderTexture2D inventory_texture = LoadRenderTexture(INV_UI_WIDTH, INV_UI_HEIGHT);
     char inventory_texture_slot_size_buffer[3];
 
     while (!WindowShouldClose()) {
@@ -330,7 +329,6 @@ int main(void) {
         EndDrawing();
     }
 
-    UnloadRenderTexture(inventory_texture);
     CloseWindow();
     return 0;
 }
