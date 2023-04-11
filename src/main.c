@@ -18,6 +18,8 @@
 #define INV_UI_SCALE_FACTOR 0.75f
 #define INV_UI_WIDTH (WINDOW_WIDTH * INV_UI_SCALE_FACTOR)
 #define INV_UI_HEIGHT (WINDOW_HEIGHT * INV_UI_SCALE_FACTOR)
+#define INV_UI_POS_X (WINDOW_WIDTH / 2 - INV_UI_WIDTH / 2)
+#define INV_UI_POS_Y (WINDOW_HEIGHT / 2 - INV_UI_HEIGHT / 2)
 #define INV_UI_PAD_LEFT 10
 #define INV_UI_PAD_TOP 10
 #define INV_UI_PAD_SLOT_FACTOR 0.1f
@@ -256,78 +258,67 @@ int main(void) {
             DrawRectangle(player.position.x, player.position.y, PLAYER_SIZE, PLAYER_SIZE, BLACK);
 
             if (inventory_open) {
-                BeginTextureMode(inventory_texture);
-                    DrawRectangle(
-                        0,
-                        0,
-                        inventory_texture.texture.width,
-                        inventory_texture.texture.height,
-                        ColorAlpha(BLACK, INV_UI_OPACITY)
-                    );
+                DrawRectangle(
+                    INV_UI_POS_X,
+                    INV_UI_POS_Y,
+                    INV_UI_WIDTH,
+                    INV_UI_HEIGHT,
+                    ColorAlpha(BLACK, INV_UI_OPACITY)
+                );
 
-                    for (int i = 0; i < INV_SIZE; ++i) {
-                        int shift_right = i % INV_UI_COLUMN_COUNT;
-                        int shift_down = i / INV_UI_COLUMN_COUNT;
+                for (int i = 0; i < INV_SIZE; ++i) {
+                    int shift_right = i % INV_UI_COLUMN_COUNT;
+                    int shift_down = i / INV_UI_COLUMN_COUNT;
 
-                        Vector2 slot_pos = (Vector2){
-                            .x = INV_UI_PAD_LEFT + shift_right * INV_UI_SLOT_SIZE_X,
-                            .y = INV_UI_PAD_TOP + shift_down * INV_UI_SLOT_SIZE_Y
-                        };
+                    Vector2 slot_pos = (Vector2){
+                        .x = INV_UI_PAD_LEFT + shift_right * INV_UI_SLOT_SIZE_X + INV_UI_POS_X,
+                        .y = INV_UI_PAD_TOP + shift_down * INV_UI_SLOT_SIZE_Y + INV_UI_POS_Y,
+                    };
 
-                        DrawRectangle(
-                            slot_pos.x + INV_UI_PAD_SLOT_X / 2,
-                            slot_pos.y + INV_UI_PAD_SLOT_Y / 2,
-                            INV_UI_SLOT_SIZE_X - INV_UI_PAD_SLOT_X,
-                            INV_UI_SLOT_SIZE_Y - INV_UI_PAD_SLOT_Y,
-                            YELLOW
+                    Rectangle slot_rect = (Rectangle){
+                        .x = slot_pos.x + INV_UI_PAD_SLOT_X / 2,
+                        .y = slot_pos.y + INV_UI_PAD_SLOT_Y / 2,
+                        .width = INV_UI_SLOT_SIZE_X - INV_UI_PAD_SLOT_X,
+                        .height = INV_UI_SLOT_SIZE_Y - INV_UI_PAD_SLOT_Y
+                    };
+
+                    if (CheckCollisionPointRec(GetMousePosition(), slot_rect)) {
+                        DrawRectangle(slot_rect.x - 5, slot_rect.y - 5, slot_rect.width + 10, slot_rect.height + 10, WHITE);
+                    }
+
+                    DrawRectangleRec(slot_rect, YELLOW);
+
+                    if (player.inventory->occupied[i]) {
+                        Slot *slot = &player.inventory->slots[i];
+
+                        DrawText(
+                            slot->item->prefab->name,
+                            slot_pos.x + INV_UI_PAD_TEXT,
+                            slot_pos.y + INV_UI_PAD_TEXT,
+                            INV_UI_FONT_SIZE,
+                            BLACK
                         );
 
-                        if (player.inventory->occupied[i]) {
-                            Slot *slot = &player.inventory->slots[i];
+                        if (slot->item->max_slot_size != 1) {
+                            snprintf(
+                                inventory_texture_slot_size_buffer,
+                                sizeof(inventory_texture_slot_size_buffer),
+                                "%d",
+                                player.inventory->slots[i].size
+                            );
+
+                            int text_width = MeasureText(inventory_texture_slot_size_buffer, INV_UI_FONT_SIZE); 
 
                             DrawText(
-                                slot->item->prefab->name,
-                                slot_pos.x + INV_UI_PAD_TEXT,
-                                slot_pos.y + INV_UI_PAD_TEXT,
+                                inventory_texture_slot_size_buffer,
+                                slot_pos.x + INV_UI_SLOT_SIZE_X - text_width - INV_UI_PAD_TEXT_SLOT_SIZE_X,
+                                slot_pos.y + INV_UI_SLOT_SIZE_Y - INV_UI_FONT_SIZE - INV_UI_PAD_TEXT_SLOT_SIZE_Y,
                                 INV_UI_FONT_SIZE,
                                 BLACK
                             );
-
-                            if (slot->item->max_slot_size != 1) {
-                                snprintf(
-                                    inventory_texture_slot_size_buffer,
-                                    sizeof(inventory_texture_slot_size_buffer),
-                                    "%d",
-                                    player.inventory->slots[i].size
-                                );
-
-                                int text_width = MeasureText(inventory_texture_slot_size_buffer, INV_UI_FONT_SIZE); 
-
-                                DrawText(
-                                    inventory_texture_slot_size_buffer,
-                                    slot_pos.x + INV_UI_SLOT_SIZE_X - text_width - INV_UI_PAD_TEXT_SLOT_SIZE_X,
-                                    slot_pos.y + INV_UI_SLOT_SIZE_Y - INV_UI_FONT_SIZE - INV_UI_PAD_TEXT_SLOT_SIZE_Y,
-                                    INV_UI_FONT_SIZE,
-                                    BLACK
-                                );
-                            }
                         }
                     }
-                EndTextureMode();
-
-                Rectangle inventory_rect = (Rectangle){
-                    .width = inventory_texture.texture.width,
-                    .height = -inventory_texture.texture.height,
-                    .x = 0.f,
-                    .y = 0.f
-                };
-
-                Vector2 inventory_pos = (Vector2){
-                    WINDOW_WIDTH / 2 - INV_UI_WIDTH / 2,
-                    WINDOW_HEIGHT / 2 - INV_UI_HEIGHT / 2,
-                };
-
-                DrawTextureRec(inventory_texture.texture, inventory_rect, inventory_pos, WHITE);
+                }
             }
         EndDrawing();
     }
